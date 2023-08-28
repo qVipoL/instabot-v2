@@ -3,9 +3,8 @@ from instagrapi.exceptions import LoginRequired
 import os
 import logging
 import datetime
-
-cl = Client()
-
+import time
+import random
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -29,20 +28,50 @@ logger.addHandler(fh)
 
 USERNAME = "0546605274"
 PASSWORD = "AmazingNight123!"
+PROXY = "http://xdjtexfm:89sugm26m8a5@2.56.119.93:5074"
 DELAY_RANGE = [5, 10]
+
+MIN_SECS_BETWEEN_ACTIONS = 5 * 60
+MAX_SECS_BETWEEN_ACTIONS = 7 * 60
+
+MAX_STORIES_PER_DAY = 150
+MAX_LIKES_PER_DAY = 150
+MAX_FOLLOWS_PER_DAY = 15
 
 SESSION_PATH = "session.json"
 
 
 class InstaBot:
-    def __init__(self, username: str, password: str, delay_range: tuple):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        delay_range: tuple,
+        max_likes: int = 1,
+        max_follows: int = 1,
+        max_stories: int = 1,
+        proxy: str = None,
+    ):
         self.username = username
         self.password = password
         self.api = Client()
         self.api.delay_range = delay_range
+
+        self.max_likes = max_likes
+        self.max_follows = max_follows
+        self.max_stories = max_stories
+
         self.total_likes = 0
         self.total_subs = 0
         self.total_stories = 0
+
+        if proxy:
+            before_ip = self.api._send_public_request("https://ipv4.webshare.io/")
+            self.api.set_proxy(proxy)
+            after_ip = self.api._send_public_request("https://ipv4.webshare.io/")
+
+            logger.info("Before proxy: %s" % before_ip)
+            logger.info("After proxy: %s" % after_ip)
 
     def login(self):
         """
@@ -72,7 +101,7 @@ class InstaBot:
                         "Session is invalid, need to login via username and password"
                     )
 
-                    old_session = cl.get_settings()
+                    old_session = self.api.get_settings()
 
                     # use the same device uuids across logins
                     self.api.set_settings({})
@@ -110,11 +139,19 @@ class InstaBot:
         """
         Finds and likes {amount} posts by {hashtag}
         """
+        if self.total_likes >= self.max_likes:
+            logger.info("Reached max likes per day")
+            return
+
         medias = self.api.hashtag_medias_recent_v1(hashtag, amount)
 
         logger.info("Found %s posts" % len(medias))
 
         for media in medias:
+            if self.total_likes >= self.max_likes:
+                logger.info("Reached max likes per day")
+                return
+
             if media.has_liked:
                 continue
 
@@ -128,12 +165,20 @@ class InstaBot:
         """
         Finds and follows {amount} users by {query}
         """
+        if self.total_subs >= self.max_follows:
+            logger.info("Reached max follows per day")
+            return
 
         users = self.api.search_users_v1(query, amount)
+        users = users[:amount]
 
         logger.info("Found %s users" % len(users))
 
         for user in users:
+            if self.total_subs >= self.max_follows:
+                logger.info("Reached max follows per day")
+                return
+
             if user.is_private:
                 continue
 
@@ -149,9 +194,17 @@ class InstaBot:
         """
         Finds and watches {amount} of stories for {users_amount} of users by {hashtag}
         """
+        if self.total_stories >= self.max_stories:
+            logger.info("Reached max stories per day")
+            return
+
         users = self.api.search_users_v1(hashtag, users_amount)
 
         for user in users:
+            if self.total_stories >= self.max_stories:
+                logger.info("Reached max stories per day")
+                return
+
             if user.is_private:
                 continue
 
@@ -173,12 +226,48 @@ class InstaBot:
         logger.info("Total watched %s stories" % self.total_stories)
 
 
-def main():
-    bot = InstaBot(USERNAME, PASSWORD, DELAY_RANGE)
+def get_random_hashtag():
+    hashtags = ["cats", "dogs", "food", "nature", "travel", "cars", "music", "art"]
+    return random.choice(hashtags)
+
+
+def get_random_username():
+    usernames = [
+        "skilled-bridge",
+        "avital",
+        "david",
+        "daniel",
+        "yoni",
+        "yael",
+        "shir",
+        "shira",
+    ]
+    return random.choice(usernames)
+
+
+def run_bot():
+    bot = InstaBot(
+        username=USERNAME,
+        password=PASSWORD,
+        delay_range=DELAY_RANGE,
+        max_likes=MAX_LIKES_PER_DAY,
+        max_follows=MAX_FOLLOWS_PER_DAY,
+        max_stories=MAX_STORIES_PER_DAY,
+        proxy=PROXY,
+    )
+
     bot.login()
-    # bot.find_and_like_posts("cats")
-    # bot.find_and_follow_users("skilled-bridge")
-    # bot.find_and_watch_stories("avital")
+
+    while True:
+        bot.find_and_like_posts(get_random_hashtag(), 1)
+        bot.find_and_follow_users(get_random_username(), 1)
+        bot.find_and_watch_stories(get_random_username(), 1, 5)
+
+        time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
+
+
+def main():
+    run_bot()
 
 
 if __name__ == "__main__":
