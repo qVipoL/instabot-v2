@@ -5,6 +5,13 @@ import logging
 import datetime
 import time
 import random
+import sys
+
+args = sys.argv[1:]
+
+if len(args) < 2:
+    print("Usage: python3 bot.py <username> <password> <proxy?>")
+    sys.exit(1)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -13,7 +20,11 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-log_file = f"bot_log_{timestamp}.log"
+
+if args[0]:
+    os.makedirs(args[0], exist_ok=True)
+
+log_file = f"./{args[0]}/bot_log_{timestamp}.log"
 
 fh = logging.FileHandler(log_file)
 fh.setLevel(logging.DEBUG)
@@ -26,9 +37,6 @@ fh.setFormatter(formatter)
 logger.addHandler(ch)
 logger.addHandler(fh)
 
-USERNAME = "0546605274"
-PASSWORD = "AmazingNight123!"
-PROXY = "http://xdjtexfm:89sugm26m8a5@2.56.119.93:5074"
 DELAY_RANGE = [5, 10]
 
 MIN_SECS_BETWEEN_ACTIONS = 5 * 60
@@ -38,7 +46,7 @@ MAX_STORIES_PER_DAY = 150
 MAX_LIKES_PER_DAY = 150
 MAX_FOLLOWS_PER_DAY = 15
 
-SESSION_PATH = "session.json"
+SESSION_PATH = f"./{args[0]}/session.json"
 
 
 class InstaBot:
@@ -160,6 +168,9 @@ class InstaBot:
             self.total_likes += 1
 
         logger.info("Total liked %s posts" % self.total_likes)
+        logger.info(
+            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
+        )
 
     def find_and_follow_users(self, query: str, amount: int = 1):
         """
@@ -187,6 +198,9 @@ class InstaBot:
             logger.info("Followed user: %s" % user.username)
 
         logger.info("Total followed %s users" % self.total_subs)
+        logger.info(
+            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
+        )
 
     def find_and_watch_stories(
         self, hashtag: str, users_amount: int = 1, amount: int = 1
@@ -224,6 +238,9 @@ class InstaBot:
             )
 
         logger.info("Total watched %s stories" % self.total_stories)
+        logger.info(
+            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
+        )
 
 
 def get_random_hashtag():
@@ -246,14 +263,18 @@ def get_random_username():
 
 
 def run_bot():
+    username = args[0]
+    password = args[1]
+    proxy = args[2] if len(args) > 2 else None
+
     bot = InstaBot(
-        username=USERNAME,
-        password=PASSWORD,
+        username=username,
+        password=password,
         delay_range=DELAY_RANGE,
         max_likes=MAX_LIKES_PER_DAY,
         max_follows=MAX_FOLLOWS_PER_DAY,
         max_stories=MAX_STORIES_PER_DAY,
-        proxy=PROXY,
+        proxy=proxy,
     )
 
     bot.login()
