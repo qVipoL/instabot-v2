@@ -304,7 +304,9 @@ def run_bot():
 
     while True:
         bot.find_and_like_posts(get_random_hashtag(), 1)
+        time.sleep(10)
         bot.find_and_follow_users(get_random_username(), 1)
+        time.sleep(15)
         bot.find_and_watch_stories(get_random_username(), 1, 5)
 
         time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
