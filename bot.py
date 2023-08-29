@@ -225,6 +225,9 @@ class InstaBot:
                 return
 
             users = self.api.search_users_v1(hashtag, users_amount)
+            users = users[:users_amount]
+
+            logger.info("Found %s users to watch stories" % len(users))
 
             for user in users:
                 if self.total_stories >= self.max_stories:
