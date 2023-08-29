@@ -147,60 +147,68 @@ class InstaBot:
         """
         Finds and likes {amount} posts by {hashtag}
         """
-        if self.total_likes >= self.max_likes:
-            logger.info("Reached max likes per day")
-            return
-
-        medias = self.api.hashtag_medias_recent_v1(hashtag, amount)
-
-        logger.info("Found %s posts" % len(medias))
-
-        for media in medias:
+        try:
             if self.total_likes >= self.max_likes:
                 logger.info("Reached max likes per day")
                 return
 
-            if media.has_liked:
-                continue
+            medias = self.api.hashtag_medias_recent_v1(hashtag, amount)
 
-            self.api.media_like(media.pk)
-            logger.info("Liked post: %s" % media.pk)
-            self.total_likes += 1
+            logger.info("Found %s posts" % len(medias))
 
-        logger.info("Total liked %s posts" % self.total_likes)
-        logger.info(
-            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
-        )
+            for media in medias:
+                if self.total_likes >= self.max_likes:
+                    logger.info("Reached max likes per day")
+                    return
+
+                if media.has_liked:
+                    continue
+
+                self.api.media_like(media.pk)
+                logger.info("Liked post: %s" % media.pk)
+                self.total_likes += 1
+
+            logger.info("Total liked %s posts" % self.total_likes)
+            logger.info(
+                f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
+            )
+        except Exception as e:
+            logger.info("Couldn't like post: %s" % e)
+            raise e
 
     def find_and_follow_users(self, query: str, amount: int = 1):
         """
         Finds and follows {amount} users by {query}
         """
-        if self.total_subs >= self.max_follows:
-            logger.info("Reached max follows per day")
-            return
-
-        users = self.api.search_users_v1(query, amount)
-        users = users[:amount]
-
-        logger.info("Found %s users" % len(users))
-
-        for user in users:
+        try:
             if self.total_subs >= self.max_follows:
                 logger.info("Reached max follows per day")
                 return
 
-            if user.is_private:
-                continue
+            users = self.api.search_users_v1(query, amount)
+            users = users[:amount]
 
-            self.api.user_follow(user.pk)
-            self.total_subs += 1
-            logger.info("Followed user: %s" % user.username)
+            logger.info("Found %s users" % len(users))
 
-        logger.info("Total followed %s users" % self.total_subs)
-        logger.info(
-            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
-        )
+            for user in users:
+                if self.total_subs >= self.max_follows:
+                    logger.info("Reached max follows per day")
+                    return
+
+                if user.is_private:
+                    continue
+
+                self.api.user_follow(user.pk)
+                self.total_subs += 1
+                logger.info("Followed user: %s" % user.username)
+
+            logger.info("Total followed %s users" % self.total_subs)
+            logger.info(
+                f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
+            )
+        except Exception as e:
+            logger.info("Couldn't follow user: %s" % e)
+            raise e
 
     def find_and_watch_stories(
         self, hashtag: str, users_amount: int = 1, amount: int = 1
@@ -208,39 +216,45 @@ class InstaBot:
         """
         Finds and watches {amount} of stories for {users_amount} of users by {hashtag}
         """
-        if self.total_stories >= self.max_stories:
-            logger.info("Reached max stories per day")
-            return
-
-        users = self.api.search_users_v1(hashtag, users_amount)
-
-        for user in users:
+        try:
             if self.total_stories >= self.max_stories:
                 logger.info("Reached max stories per day")
                 return
 
-            if user.is_private:
-                continue
+            users = self.api.search_users_v1(hashtag, users_amount)
 
-            stories = self.api.user_stories_v1(user.pk, amount)
+            for user in users:
+                if self.total_stories >= self.max_stories:
+                    logger.info("Reached max stories per day")
+                    return
 
-            if len(stories) == 0:
-                continue
+                if user.is_private:
+                    continue
 
-            logger.info("Found %s stories for user: %s" % (len(stories), user.username))
+                stories = self.api.user_stories_v1(user.pk, amount)
 
-            story_pks = [story.pk for story in stories]
-            self.api.story_seen(story_pks)
-            self.total_stories += len(story_pks)
+                if len(stories) == 0:
+                    continue
 
+                logger.info(
+                    "Found %s stories for user: %s" % (len(stories), user.username)
+                )
+
+                story_pks = [story.pk for story in stories]
+                self.api.story_seen(story_pks)
+                self.total_stories += len(story_pks)
+
+                logger.info(
+                    "Watched %s stories for user: %s" % (len(story_pks), user.username)
+                )
+
+            logger.info("Total watched %s stories" % self.total_stories)
             logger.info(
-                "Watched %s stories for user: %s" % (len(story_pks), user.username)
+                f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
-
-        logger.info("Total watched %s stories" % self.total_stories)
-        logger.info(
-            f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
-        )
+        except Exception as e:
+            logger.info("Couldn't watch stories: %s" % e)
+            raise e
 
 
 def get_random_hashtag():
