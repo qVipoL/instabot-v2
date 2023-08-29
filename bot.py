@@ -1,5 +1,5 @@
 from instagrapi import Client
-from instagrapi.exceptions import LoginRequired
+from instagrapi.exceptions import LoginRequired, MediaNotFound
 import os
 import logging
 import datetime
@@ -172,6 +172,9 @@ class InstaBot:
             logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
+        except MediaNotFound:
+            logger.info("Couldn't find posts for hashtag: %s" % hashtag)
+            pass
         except Exception as e:
             logger.info("Couldn't like post: %s" % e)
             raise e
@@ -252,6 +255,9 @@ class InstaBot:
             logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
+        except MediaNotFound:
+            logger.info("Couldn't find stories for user: %s" % user.username)
+            pass
         except Exception as e:
             logger.info("Couldn't watch stories: %s" % e)
             raise e
