@@ -302,6 +302,8 @@ def run_bot():
 
     bot.login()
 
+    time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
+
     while True:
         bot.find_and_like_posts(get_random_hashtag(), 1)
         time.sleep(30)
