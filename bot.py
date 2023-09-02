@@ -39,12 +39,12 @@ logger.addHandler(fh)
 
 DELAY_RANGE = [5, 10]
 
-MIN_SECS_BETWEEN_ACTIONS = 5 * 60
-MAX_SECS_BETWEEN_ACTIONS = 7 * 60
+MIN_SECS_BETWEEN_ACTIONS = 9 * 60
+MAX_SECS_BETWEEN_ACTIONS = 11 * 60
 
-MAX_STORIES_PER_DAY = 150
-MAX_LIKES_PER_DAY = 150
-MAX_FOLLOWS_PER_DAY = 15
+MAX_STORIES_PER_DAY = 200
+MAX_LIKES_PER_DAY = 200
+MAX_FOLLOWS_PER_DAY = 20
 
 SESSION_PATH = f"./{args[0]}/session.json"
 
@@ -304,9 +304,9 @@ def run_bot():
 
     while True:
         bot.find_and_like_posts(get_random_hashtag(), 1)
-        time.sleep(10)
+        time.sleep(30)
         bot.find_and_follow_users(get_random_username(), 1)
-        time.sleep(15)
+        time.sleep(30)
         bot.find_and_watch_stories(get_random_username(), 1, 5)
 
         time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
