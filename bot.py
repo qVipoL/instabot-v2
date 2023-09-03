@@ -1,5 +1,5 @@
 from instagrapi import Client
-from instagrapi.exceptions import LoginRequired, MediaNotFound
+from instagrapi.exceptions import LoginRequired, MediaNotFound, PleaseWaitFewMinutes
 import os
 import logging
 import datetime
@@ -305,13 +305,19 @@ def run_bot():
     time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
 
     while True:
-        bot.find_and_like_posts(get_random_hashtag(), 1)
-        time.sleep(30)
-        bot.find_and_follow_users(get_random_username(), 1)
-        time.sleep(30)
-        bot.find_and_watch_stories(get_random_username(), 1, 5)
-
-        time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
+        try:
+            bot.find_and_like_posts(get_random_hashtag(), 1)
+            time.sleep(30)
+            bot.find_and_follow_users(get_random_username(), 1)
+            time.sleep(30)
+            bot.find_and_watch_stories(get_random_username(), 1, 5)
+        except PleaseWaitFewMinutes:
+            logger.info("Reached rate limit")
+            pass
+        finally:
+            time.sleep(
+                random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS)
+            )
 
 
 def main():
