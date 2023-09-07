@@ -39,12 +39,12 @@ logger.addHandler(fh)
 
 DELAY_RANGE = [5, 10]
 
-MIN_SECS_BETWEEN_ACTIONS = 9 * 60
-MAX_SECS_BETWEEN_ACTIONS = 11 * 60
+MIN_SECS_BETWEEN_ACTIONS = 10 * 60
+MAX_SECS_BETWEEN_ACTIONS = 14 * 60
 
-MAX_STORIES_PER_DAY = 200
-MAX_LIKES_PER_DAY = 200
-MAX_FOLLOWS_PER_DAY = 20
+MAX_STORIES_PER_DAY = 260
+MAX_LIKES_PER_DAY = 120
+MAX_FOLLOWS_PER_DAY = 15
 
 SESSION_PATH = f"./{args[0]}/session.json"
 
@@ -307,9 +307,9 @@ def run_bot():
     while True:
         try:
             bot.find_and_like_posts(get_random_hashtag(), 1)
-            time.sleep(30)
+            time.sleep(random.randint(60, 120))
             bot.find_and_follow_users(get_random_username(), 1)
-            time.sleep(30)
+            time.sleep(random.randint(60, 120))
             bot.find_and_watch_stories(get_random_username(), 1, 5)
         except PleaseWaitFewMinutes:
             logger.info("Reached rate limit")
