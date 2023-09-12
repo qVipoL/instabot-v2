@@ -1,52 +1,45 @@
 from instagrapi import Client
-from instagrapi.exceptions import LoginRequired, MediaNotFound, PleaseWaitFewMinutes
+from instagrapi.exceptions import (
+    LoginRequired,
+    MediaNotFound,
+    PleaseWaitFewMinutes,
+    ClientLoginRequired,
+)
 import os
 import logging
 import datetime
 import time
 import random
-import sys
+from models import BotStartModel
 
-args = sys.argv[1:]
-
-if len(args) < 2:
-    print("Usage: python3 bot.py <username> <password> <proxy?>")
-    sys.exit(1)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-if args[0]:
-    os.makedirs(args[0], exist_ok=True)
-
-log_file = f"./{args[0]}/bot_log_{timestamp}.log"
-
-fh = logging.FileHandler(log_file)
-fh.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("[%(asctime)s] - %(name)s - %(levelname)s - %(message)s")
-
-ch.setFormatter(formatter)
-fh.setFormatter(formatter)
-
-logger.addHandler(ch)
-logger.addHandler(fh)
 
 DELAY_RANGE = [5, 10]
 
-MIN_SECS_BETWEEN_ACTIONS = 10 * 60
-MAX_SECS_BETWEEN_ACTIONS = 14 * 60
 
-MAX_STORIES_PER_DAY = 260
-MAX_LIKES_PER_DAY = 120
-MAX_FOLLOWS_PER_DAY = 15
+def setup_logger(filename: str):
+    logger = logging.getLogger(filename)
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
 
-SESSION_PATH = f"./{args[0]}/session.json"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    log_file = f"./{filename}/bot_log_{timestamp}.log"
+
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter(
+        "[%(asctime)s] - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+
+    return logger
 
 
 class InstaBot:
@@ -59,11 +52,15 @@ class InstaBot:
         max_follows: int = 1,
         max_stories: int = 1,
         proxy: str = None,
+        session_path: str = None,
+        logger=None,
     ):
         self.username = username
         self.password = password
         self.api = Client()
         self.api.delay_range = delay_range
+        self.session_path = session_path
+        self.logger = logger
 
         self.max_likes = max_likes
         self.max_follows = max_follows
@@ -78,8 +75,8 @@ class InstaBot:
             self.api.set_proxy(proxy)
             after_ip = self.api._send_public_request("https://ipv4.webshare.io/")
 
-            logger.info("Before proxy: %s" % before_ip)
-            logger.info("After proxy: %s" % after_ip)
+            self.logger.info("Before proxy: %s" % before_ip)
+            self.logger.info("After proxy: %s" % after_ip)
 
     def login(self):
         """
@@ -88,8 +85,8 @@ class InstaBot:
         """
 
         session = (
-            self.api.load_settings(SESSION_PATH)
-            if os.path.exists(SESSION_PATH)
+            self.api.load_settings(self.session_path)
+            if os.path.exists(self.session_path)
             else None
         )
 
@@ -105,7 +102,7 @@ class InstaBot:
                 try:
                     self.api.get_timeline_feed()
                 except LoginRequired:
-                    logger.info(
+                    self.logger.info(
                         "Session is invalid, need to login via username and password"
                     )
 
@@ -120,26 +117,30 @@ class InstaBot:
                 login_via_session = True
 
             except Exception as e:
-                logger.info("Couldn't login user using session information: %s" % e)
+                self.logger.info(
+                    "Couldn't login user using session information: %s" % e
+                )
 
         if not login_via_session:
             try:
-                logger.info(
+                self.logger.info(
                     "Attempting to login via username and password. username: %s"
                     % self.username
                 )
 
                 if self.api.login(self.username, self.password):
                     login_via_pw = True
-                    self.api.dump_settings(SESSION_PATH)
+                    self.api.dump_settings(self.session_path)
 
             except Exception as e:
-                logger.info("Couldn't login user using username and password: %s" % e)
+                self.logger.info(
+                    "Couldn't login user using username and password: %s" % e
+                )
 
         if not login_via_pw and not login_via_session:
             raise Exception("Couldn't login user with either password or session")
 
-        logger.info(
+        self.logger.info(
             "Logged in via session" if login_via_session else "Logged in via password"
         )
 
@@ -149,34 +150,34 @@ class InstaBot:
         """
         try:
             if self.total_likes >= self.max_likes:
-                logger.info("Reached max likes per day")
+                self.logger.info("Reached max likes per day")
                 return
 
             medias = self.api.hashtag_medias_recent_v1(hashtag, amount)
 
-            logger.info("Found %s posts" % len(medias))
+            self.logger.info("Found %s posts" % len(medias))
 
             for media in medias:
                 if self.total_likes >= self.max_likes:
-                    logger.info("Reached max likes per day")
+                    self.logger.info("Reached max likes per day")
                     return
 
                 if media.has_liked:
                     continue
 
                 self.api.media_like(media.pk)
-                logger.info("Liked post: %s" % media.pk)
+                self.logger.info("Liked post: %s" % media.pk)
                 self.total_likes += 1
 
-            logger.info("Total liked %s posts" % self.total_likes)
-            logger.info(
+            self.logger.info("Total liked %s posts" % self.total_likes)
+            self.logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
         except MediaNotFound:
-            logger.info("Couldn't find posts for hashtag: %s" % hashtag)
+            self.logger.info("Couldn't find posts for hashtag: %s" % hashtag)
             pass
         except Exception as e:
-            logger.info("Couldn't like post: %s" % e)
+            self.logger.info("Couldn't like post: %s" % e)
             raise e
 
     def find_and_follow_users(self, query: str, amount: int = 1):
@@ -185,17 +186,17 @@ class InstaBot:
         """
         try:
             if self.total_subs >= self.max_follows:
-                logger.info("Reached max follows per day")
+                self.logger.info("Reached max follows per day")
                 return
 
             users = self.api.search_users_v1(query, amount)
             users = users[:amount]
 
-            logger.info("Found %s users" % len(users))
+            self.logger.info("Found %s users" % len(users))
 
             for user in users:
                 if self.total_subs >= self.max_follows:
-                    logger.info("Reached max follows per day")
+                    self.logger.info("Reached max follows per day")
                     return
 
                 if user.is_private:
@@ -203,14 +204,14 @@ class InstaBot:
 
                 self.api.user_follow(user.pk)
                 self.total_subs += 1
-                logger.info("Followed user: %s" % user.username)
+                self.logger.info("Followed user: %s" % user.username)
 
-            logger.info("Total followed %s users" % self.total_subs)
-            logger.info(
+            self.logger.info("Total followed %s users" % self.total_subs)
+            self.logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
         except Exception as e:
-            logger.info("Couldn't follow user: %s" % e)
+            self.logger.info("Couldn't follow user: %s" % e)
             raise e
 
     def find_and_watch_stories(
@@ -221,17 +222,17 @@ class InstaBot:
         """
         try:
             if self.total_stories >= self.max_stories:
-                logger.info("Reached max stories per day")
+                self.logger.info("Reached max stories per day")
                 return
 
             users = self.api.search_users_v1(hashtag, users_amount)
             users = users[:users_amount]
 
-            logger.info("Found %s users to watch stories" % len(users))
+            self.logger.info("Found %s users to watch stories" % len(users))
 
             for user in users:
                 if self.total_stories >= self.max_stories:
-                    logger.info("Reached max stories per day")
+                    self.logger.info("Reached max stories per day")
                     return
 
                 if user.is_private:
@@ -242,7 +243,7 @@ class InstaBot:
                 if len(stories) == 0:
                     continue
 
-                logger.info(
+                self.logger.info(
                     "Found %s stories for user: %s" % (len(stories), user.username)
                 )
 
@@ -250,79 +251,90 @@ class InstaBot:
                 self.api.story_seen(story_pks)
                 self.total_stories += len(story_pks)
 
-                logger.info(
+                self.logger.info(
                     "Watched %s stories for user: %s" % (len(story_pks), user.username)
                 )
 
-            logger.info("Total watched %s stories" % self.total_stories)
-            logger.info(
+            self.logger.info("Total watched %s stories" % self.total_stories)
+            self.logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
         except MediaNotFound:
-            logger.info("Couldn't find stories for user: %s" % user.username)
+            self.logger.info("Couldn't find stories for user: %s" % user.username)
             pass
         except Exception as e:
-            logger.info("Couldn't watch stories: %s" % e)
+            self.logger.info("Couldn't watch stories: %s" % e)
             raise e
 
 
-def get_random_hashtag():
-    hashtags = ["cats", "dogs", "food", "nature", "travel", "cars", "music", "art"]
-    return random.choice(hashtags)
+def run_bot(config: BotStartModel):
+    username = config.username
+    password = config.password
+    proxy = config.proxy
+    max_likes_day = config.max_likes_day
+    max_follows_day = config.max_follows_day
+    max_stories_day = config.max_stories_day
+    min_time_between_cycles_secs = config.min_time_between_cycles_secs
+    max_time_between_cycles_secs = config.max_time_between_cycles_secs
+    min_time_between_actions_secs = config.min_time_between_actions_secs
+    max_time_between_actions_secs = config.max_time_between_actions_secs
+    posts_hashtag_list = config.posts_hashtag_list
+    follow_hashtag_list = config.follow_hashtag_list
+    stories_hashtag_list = config.stories_hashtag_list
 
-
-def get_random_username():
-    usernames = [
-        "skilled-bridge",
-        "avital",
-        "david",
-        "daniel",
-        "yoni",
-        "yael",
-        "shir",
-        "shira",
-    ]
-    return random.choice(usernames)
-
-
-def run_bot():
-    username = args[0]
-    password = args[1]
-    proxy = args[2] if len(args) > 2 else None
+    os.makedirs(username, exist_ok=True)
+    logger = setup_logger(username)
+    session_path = f"./{username}/session.json"
 
     bot = InstaBot(
         username=username,
         password=password,
         delay_range=DELAY_RANGE,
-        max_likes=MAX_LIKES_PER_DAY,
-        max_follows=MAX_FOLLOWS_PER_DAY,
-        max_stories=MAX_STORIES_PER_DAY,
+        max_likes=max_likes_day,
+        max_follows=max_follows_day,
+        max_stories=max_stories_day,
         proxy=proxy,
+        session_path=session_path,
+        logger=logger,
     )
 
     bot.login()
 
-    time.sleep(random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS))
+    time.sleep(
+        random.randint(min_time_between_cycles_secs, max_time_between_cycles_secs)
+    )
 
     while True:
+        if (
+            bot.total_likes >= bot.max_likes
+            and bot.total_subs >= bot.max_follows
+            and bot.total_stories >= bot.max_stories
+        ):
+            logger.info("Reached max likes, follows and stories per day")
+            break
+
         try:
-            bot.find_and_like_posts(get_random_hashtag(), 1)
-            time.sleep(random.randint(60, 120))
-            bot.find_and_follow_users(get_random_username(), 1)
-            time.sleep(random.randint(60, 120))
-            bot.find_and_watch_stories(get_random_username(), 1, 5)
+            bot.find_and_like_posts(random.choice(posts_hashtag_list), 1)
+            time.sleep(
+                random.randint(
+                    min_time_between_actions_secs, max_time_between_actions_secs
+                )
+            )
+            bot.find_and_follow_users(random.choice(follow_hashtag_list), 1)
+            time.sleep(
+                random.randint(
+                    min_time_between_actions_secs, max_time_between_actions_secs
+                )
+            )
+            bot.find_and_watch_stories(random.choice(stories_hashtag_list), 1, 5)
         except PleaseWaitFewMinutes:
             logger.info("Reached rate limit")
-            pass
+        except ClientLoginRequired:
+            logger.info("Login required")
+            bot.login()
         finally:
             time.sleep(
-                random.randint(MIN_SECS_BETWEEN_ACTIONS, MAX_SECS_BETWEEN_ACTIONS)
+                random.randint(
+                    min_time_between_cycles_secs, max_time_between_cycles_secs
+                )
             )
-
-
-def main():
-    run_bot()
-
-
-if __name__ == "__main__":
-    main()
