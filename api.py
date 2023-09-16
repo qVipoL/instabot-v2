@@ -6,6 +6,8 @@ from bot import run_bot
 import threading
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
+from stop_thread import stop_thread
+import asyncio
 
 DEBUG = True
 VERSION = "0.0.1"
@@ -58,12 +60,16 @@ async def stop_bot(username: str) -> BotStatusResponseModel:
 @app.post("/bot/start")
 async def start_bot(body: BotStartModel) -> BotResponseModel:
     if bot_threads.get(body.username):
-        bot_threads[body.username].terminate()
+        stop_thread(bot_threads[body.username].ident)
+        bot_threads[body.username].join()
+        bot_threads[body.username] = None
 
     bot_t = threading.Thread(target=run_bot, args=(body,))
     bot_threads[body.username] = bot_t
     bot_threads[body.username].daemon = True
     bot_threads[body.username].start()
+
+    await asyncio.sleep(5)
 
     active_bots = sum(1 for thread in bot_threads.values() if thread.is_alive())
 
