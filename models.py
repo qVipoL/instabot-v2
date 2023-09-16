@@ -21,3 +21,7 @@ class BotStartModel(pydantic.BaseModel):
 class BotResponseModel(pydantic.BaseModel):
     message: str
     total_bots: int
+
+
+class BotStatusResponseModel(pydantic.BaseModel):
+    bot_status: str

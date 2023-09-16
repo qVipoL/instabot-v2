@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
-from models import BotStartModel, BotResponseModel
+from models import BotStartModel, BotResponseModel, BotStatusResponseModel
 from bot import run_bot
 import threading
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
@@ -45,6 +45,14 @@ async def get_open_api_endpoint():
 @app.get("/redoc", include_in_schema=False)
 async def redoc_html():
     return get_redoc_html(openapi_url="/openapi.json", title="API Documentation")
+
+
+@app.get("/bot/status/{username}")
+async def stop_bot(username: str) -> BotStatusResponseModel:
+    if bot_threads.get(username):
+        is_alive = bot_threads[username].is_alive()
+
+        return BotStatusResponseModel(bot_status="ACTIVE" if is_alive else "STOPPED")
 
 
 @app.post("/bot/start")
