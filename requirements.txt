@@ -1,3 +1,4 @@
 instagrapi==1.19.8
 fastapi~=0.94
 uvicorn[standard]
+stop-thread
