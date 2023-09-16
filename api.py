@@ -65,9 +65,11 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
     bot_threads[body.username].daemon = True
     bot_threads[body.username].start()
 
+    active_bots = sum(1 for thread in bot_threads.values() if thread.is_alive())
+
     return BotResponseModel(
         message="Bot started",
-        total_bots=len(bot_threads.keys()),
+        total_bots=active_bots,
     )
 
 
