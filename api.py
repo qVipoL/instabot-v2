@@ -13,6 +13,8 @@ DEBUG = True
 VERSION = "0.0.1"
 PORT = 5555
 
+BOT_LIMIT = 40
+
 bot_threads = {}
 
 app = FastAPI(
@@ -56,12 +58,21 @@ async def stop_bot(username: str) -> BotStatusResponseModel:
 
         return BotStatusResponseModel(bot_status="ACTIVE" if is_alive else "STOPPED")
 
+    return BotStatusResponseModel(bot_status="STOPPED")
+
 
 @app.post("/bot/start")
 async def start_bot(body: BotStartModel) -> BotResponseModel:
+    active_bots = sum(1 for thread in bot_threads.values() if thread.is_alive())
+
+    if active_bots >= BOT_LIMIT:
+        return BotResponseModel(
+            message="Bot limit reached",
+            total_bots=active_bots,
+        )
+
     if bot_threads.get(body.username):
         stop_thread(bot_threads[body.username].ident)
-        bot_threads[body.username].join()
         bot_threads[body.username] = None
 
     bot_t = threading.Thread(target=run_bot, args=(body,))
@@ -70,8 +81,6 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
     bot_threads[body.username].start()
 
     await asyncio.sleep(5)
-
-    active_bots = sum(1 for thread in bot_threads.values() if thread.is_alive())
 
     return BotResponseModel(
         message="Bot started",
