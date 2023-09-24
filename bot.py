@@ -189,6 +189,8 @@ class InstaBot:
                 self.logger.info("Reached max follows per day")
                 return
 
+            followed_users = self.api.user_following_v1(user_id=self.api.user_id)
+
             users = self.api.search_users_v1(query, amount)
             users = users[:amount]
 
@@ -200,6 +202,9 @@ class InstaBot:
                     return
 
                 if user.is_private:
+                    continue
+
+                if user.pk in followed_users:
                     continue
 
                 self.api.user_follow(user.pk)

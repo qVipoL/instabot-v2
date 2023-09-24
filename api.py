@@ -11,7 +11,7 @@ import asyncio
 
 DEBUG = True
 VERSION = "0.0.1"
-PORT = 5555
+PORT = 5987
 
 BOT_LIMIT = 40
 
