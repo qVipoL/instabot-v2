@@ -4,6 +4,7 @@ from instagrapi.exceptions import (
     MediaNotFound,
     PleaseWaitFewMinutes,
     ClientLoginRequired,
+    ClientNotFoundError,
 )
 import os
 import logging
@@ -173,6 +174,9 @@ class InstaBot:
             self.logger.info(
                 f"Total requests {self.total_likes + self.total_subs + self.total_stories}"
             )
+        except ClientNotFoundError:
+            self.logger.info("Couldn't find posts for hashtag: %s" % hashtag)
+            pass
         except MediaNotFound:
             self.logger.info("Couldn't find posts for hashtag: %s" % hashtag)
             pass
