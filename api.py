@@ -96,7 +96,9 @@ async def stop_bot(username: str):
 
     return BotResponseModel(
         message="Bot stopped",
-        total_bots=sum(1 for thread in bot_threads.values() if thread.is_alive()),
+        total_bots=sum(
+            1 for thread in bot_threads.values() if thread != None and thread.is_alive()
+        ),
     )
 
 
