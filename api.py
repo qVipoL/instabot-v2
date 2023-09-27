@@ -63,7 +63,9 @@ async def stop_bot(username: str) -> BotStatusResponseModel:
 
 @app.post("/bot/start")
 async def start_bot(body: BotStartModel) -> BotResponseModel:
-    active_bots = sum(1 for thread in bot_threads.values() if thread.is_alive())
+    active_bots = sum(
+        1 for thread in bot_threads.values() if thread != None and thread.is_alive()
+    )
 
     if active_bots >= BOT_LIMIT:
         return BotResponseModel(
