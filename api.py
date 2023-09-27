@@ -88,6 +88,18 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
     )
 
 
+@app.post("/bot/stop/{username}")
+async def stop_bot(username: str):
+    if bot_threads.get(username):
+        stop_thread(bot_threads[username].ident)
+        bot_threads[username] = None
+
+    return BotResponseModel(
+        message="Bot stopped",
+        total_bots=sum(1 for thread in bot_threads.values() if thread.is_alive()),
+    )
+
+
 if __name__ == "__main__":
     print("start")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
