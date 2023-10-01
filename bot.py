@@ -339,6 +339,9 @@ def run_bot(config: BotStartModel):
             bot.find_and_watch_stories(random.choice(stories_hashtag_list), 1, 5)
         except PleaseWaitFewMinutes:
             logger.info("Reached rate limit")
+        except LoginRequired:
+            logger.info("Login required")
+            bot.login()
         except ClientLoginRequired:
             logger.info("Login required")
             bot.login()
