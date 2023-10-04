@@ -307,6 +307,16 @@ def run_bot(config: BotStartModel):
         logger=logger,
     )
 
+    # 5 minutes
+    min_time_between_cycles_secs = 5 * 60
+    # 1 hour
+    max_time_between_cycles_secs = 60 * 60
+
+    # 1 minute
+    min_time_between_actions_secs = 60
+    # 10 minutes
+    max_time_between_actions_secs = 10 * 60
+
     bot.login()
 
     time.sleep(
@@ -319,7 +329,8 @@ def run_bot(config: BotStartModel):
             and bot.total_subs >= bot.max_follows
             and bot.total_stories >= bot.max_stories
         ):
-            time.sleep(10 * 60 * 60)  # sleep for 10 hours
+            # sleep from 15 to 20 hours when finished
+            time.sleep(random.randint(15 * 60 * 60, 20 * 60 * 60))
             logger.info("Reached max likes, follows and stories per day")
             break
 

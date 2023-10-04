@@ -15,6 +15,14 @@ PORT = 5987
 
 BOT_LIMIT = 40
 
+proxies = {
+    "http://jrpiplvy:p4z8h38ud023@104.143.224.52:5913": False,
+    "http://jrpiplvy:p4z8h38ud023@193.36.172.251:6334": False,
+    "http://jrpiplvy:p4z8h38ud023@104.239.91.47:5771": False,
+}
+
+username_to_proxy = {}
+
 bot_threads = {}
 
 app = FastAPI(
@@ -76,6 +84,16 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
     if bot_threads.get(body.username):
         stop_thread(bot_threads[body.username].ident)
         bot_threads[body.username] = None
+        proxies[username_to_proxy[body.username]] = False
+        username_to_proxy[body.username] = None
+
+    for proxy in proxies:
+        if not proxies[proxy]:
+            proxies[proxy] = True
+            body.proxy = proxy
+            break
+
+    username_to_proxy[body.username] = body.proxy
 
     bot_t = threading.Thread(target=run_bot, args=(body,))
     bot_threads[body.username] = bot_t
@@ -95,6 +113,8 @@ async def stop_bot(username: str):
     if bot_threads.get(username):
         stop_thread(bot_threads[username].ident)
         bot_threads[username] = None
+        proxies[username_to_proxy[username]] = False
+        username_to_proxy[username] = None
 
     return BotResponseModel(
         message="Bot stopped",
