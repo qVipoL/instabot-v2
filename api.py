@@ -16,7 +16,7 @@ PORT = 5987
 BOT_LIMIT = 40
 
 proxies = {
-    "http://jrpiplvy:p4z8h38ud023@104.143.224.52:5913": False,
+    # "http://jrpiplvy:p4z8h38ud023@104.143.224.52:5913": False,
     "http://jrpiplvy:p4z8h38ud023@193.36.172.251:6334": False,
     "http://jrpiplvy:p4z8h38ud023@104.239.91.47:5771": False,
 }
@@ -93,7 +93,9 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
             body.proxy = proxy
             break
 
-    username_to_proxy[body.username] = body.proxy
+    print("using proxy", body.proxy)
+    if body.proxy:
+        username_to_proxy[body.username] = body.proxy
 
     bot_t = threading.Thread(target=run_bot, args=(body,))
     bot_threads[body.username] = bot_t
