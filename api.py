@@ -84,8 +84,10 @@ async def start_bot(body: BotStartModel) -> BotResponseModel:
     if bot_threads.get(body.username):
         stop_thread(bot_threads[body.username].ident)
         bot_threads[body.username] = None
-        proxies[username_to_proxy[body.username]] = False
-        username_to_proxy[body.username] = None
+        
+        if username_to_proxy.get(body.username):
+            proxies[username_to_proxy[body.username]] = False
+            username_to_proxy[body.username] = None
 
     for proxy in proxies:
         if not proxies[proxy]:
